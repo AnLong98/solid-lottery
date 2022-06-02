@@ -10,7 +10,8 @@ contract Lottery is Ownable, VRFConsumerBaseV2 {
     //ENUMS
     enum LOTTERY_PHASE {
         ACTIVE,
-        INACTIVE
+        INACTIVE,
+        CHOOSING_WINNER
     }
     //
 
@@ -24,6 +25,8 @@ contract Lottery is Ownable, VRFConsumerBaseV2 {
     uint256 public entryFeeUSD;
     LOTTERY_PHASE public currentPhase;
     uint256 public randomNumber;
+    uint64 private vrfSubID;
+    uint256 vrfReqID;
     //TODO: Make not hardcoded later
     address vrfCoordinatorAddress;
     bytes32 gasLaneKeyHash;
@@ -34,13 +37,47 @@ contract Lottery is Ownable, VRFConsumerBaseV2 {
         uint256 _entryUSD,
         address _feedNetworkAddress,
         address _vrfCoordinator,
-        bytes32 _gasLane
-    ) VRFConsumerBaseV2(_vrfCoordinatorAddress) {
-        priceFeed = AggregatorV3Interface(feeNetworkAddress);
-        coordinator = VRFCoordinatorV2Interface(vrfCoordinator);
+        bytes32 _gasLane,
+        uint64 _subscriptionID
+    ) VRFConsumerBaseV2(_vrfCoordinator) {
+        priceFeedUSD = AggregatorV3Interface(_feedNetworkAddress);
+        coordinator = VRFCoordinatorV2Interface(_vrfCoordinator);
         currentPhase = LOTTERY_PHASE.INACTIVE;
         vrfCoordinatorAddress = _vrfCoordinator;
         gasLaneKeyHash = _gasLane;
+        vrfSubID = _subscriptionID;
+    }
+
+    // Assumes the subscription is funded sufficiently.
+    function requestRandomWords() private {
+        // Will revert if subscription is not set and funded.
+        vrfReqID = coordinator.requestRandomWords(
+            gasLaneKeyHash,
+            vrfSubID,
+            2, //Request confirmations hardcoded
+            100000, //Gas limit hardcoded xD
+            1 // Words to request
+        );
+    }
+
+    //Callback function to process chosen random number from VRF
+    function fulfillRandomWords(
+        uint256, /* requestId */
+        uint256[] memory randomWords
+    ) internal override {
+        randomNumber = randomWords[0];
+        uint256 winnerIndex = randomNumber % participants.length;
+        transferFundsToWinner(winnerIndex);
+    }
+
+    function transferFundsToWinner(uint256 winnerIndex) private {
+        (bool success, bytes memory data) = participants[winnerIndex].call{
+            value: address(this).balance
+        }("");
+
+        if (success) {
+            currentPhase = LOTTERY_PHASE.INACTIVE; //How to handle non success scenarios?
+        }
     }
 
     //I need a function for users to join the lottery and pay the fee
@@ -72,13 +109,20 @@ contract Lottery is Ownable, VRFConsumerBaseV2 {
             currentPhase == LOTTERY_PHASE.ACTIVE,
             "Cannot end lottery as it is not active"
         );
+        require(
+            participants.length > 0,
+            "Cannot close lottery untill there is at least one participant."
+        ); //may change this later
+        currentPhase = LOTTERY_PHASE.CHOOSING_WINNER;
+        requestRandomWords();
     }
 
     //get USD value of entry fee somehow
     //TODO: Add safemath here to avoid production issues, cause my math is garbage ;P
     function getEntryFeeUSD() public view returns (uint256) {
-        (, int256 price, , , ) = priceFeed.latestRoundData();
-        uint256 priceInDecimals = ((entryUSD * (10**18)) / (price * (10**10)));
+        (, int256 price, , , ) = priceFeedUSD.latestRoundData();
+        uint256 priceInDecimals = ((entryFeeUSD * (10**18)) /
+            (uint256(price) * (10**10)));
         return priceInDecimals;
     }
 }
