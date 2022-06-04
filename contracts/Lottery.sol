@@ -46,6 +46,7 @@ contract Lottery is Ownable, VRFConsumerBaseV2 {
         vrfCoordinatorAddress = _vrfCoordinator;
         gasLaneKeyHash = _gasLane;
         vrfSubID = _subscriptionID;
+        entryFeeUSD = _entryUSD;
     }
 
     // Assumes the subscription is funded sufficiently.
@@ -77,6 +78,7 @@ contract Lottery is Ownable, VRFConsumerBaseV2 {
 
         if (success) {
             currentPhase = LOTTERY_PHASE.INACTIVE; //How to handle non success scenarios?
+            participants = new address payable[](0);
         }
     }
 
