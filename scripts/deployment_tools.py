@@ -6,13 +6,13 @@ FORKED_NETWORKS = []
 
 
 class ContractType(enum.Enum):
-    MockV3Aggregator = 1
-    MockVRFCoordinatorV2 = 2
+    V3Aggregator = 1
+    VRFCoordinatorV2 = 2
 
 
 contract_to_mock_dict = {
-    ContractType.MockV3Aggregator: MockV3Aggregator,
-    ContractType.MockVRFCoordinatorV2: VRFCoordinatorV2Mock,
+    ContractType.V3Aggregator: MockV3Aggregator,
+    ContractType.VRFCoordinatorV2: VRFCoordinatorV2Mock,
 }
 
 
@@ -29,13 +29,16 @@ def get_user_account(account_id=None, local_test_acc_index=None):
     return accounts.add(config["wallets"]["from_key"])
 
 
-def get_contract_address_or_mock(contract_name):
+def get_contract_address_or_mock(contract_name, **kwargs):
 
-    if network.show_current() in LOCAL_NETWORKS and get_deployed_contracts_num():
-        deploy_mock(contract_name)
+    if (
+        network.show_active() in LOCAL_NETWORKS
+        and get_deployed_contracts_num(contract_to_mock_dict[contract_name]) < 1
+    ):
+        deploy_mock(contract_name, **kwargs)
         return contract_to_mock_dict[contract_name][-1]
 
-    if network.show_current() in FORKED_NETWORKS:
+    if network.show_active() in FORKED_NETWORKS:
         # get contract address from config
         pass
 
@@ -43,14 +46,14 @@ def get_contract_address_or_mock(contract_name):
 def deploy_mock(contract_name, **kwargs):
     deployment_account = get_user_account()
     match contract_name:
-        case ContractType.MockV3Aggregator:
+        case ContractType.V3Aggregator:
             deployed_mock = MockV3Aggregator.deploy(
                 kwargs["decimals"],
                 kwargs["initial_answer"],
                 {"from": deployment_account},
             )
             return deployed_mock
-        case ContractType.MockVRFCoordinatorV2:
+        case ContractType.VRFCoordinatorV2:
             deployed_mock = VRFCoordinatorV2Mock.deploy(
                 kwargs["base_fee"],
                 kwargs["gas_price_link"],
@@ -60,7 +63,7 @@ def deploy_mock(contract_name, **kwargs):
 
 
 def get_deployed_contracts_num(contract):
-    return contract.length
+    return len(contract)
 
 
 def get_network_gas_lane():
