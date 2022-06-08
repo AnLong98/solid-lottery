@@ -89,7 +89,7 @@ contract Lottery is Ownable, VRFConsumerBaseV2 {
             "Cannot join the lottery as it has not started yet."
         );
         require(
-            msg.value >= getEntryFeeUSD(),
+            msg.value >= getEntryFeeETH(),
             "Not enough money to participate"
         ); //make sure he paid enough to participate
 
@@ -119,9 +119,9 @@ contract Lottery is Ownable, VRFConsumerBaseV2 {
         requestRandomWords();
     }
 
-    //get USD value of entry fee somehow
+    //get eth value of entry fee somehow
     //TODO: Add safemath here to avoid production issues, cause my math is garbage ;P
-    function getEntryFeeUSD() public view returns (uint256) {
+    function getEntryFeeETH() public view returns (uint256) {
         (, int256 price, , , ) = priceFeedUSD.latestRoundData();
         uint256 priceInDecimals = ((entryFeeUSD * (10**18)) /
             (uint256(price) * (10**10)));
