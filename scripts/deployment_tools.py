@@ -31,10 +31,7 @@ def get_user_account(account_id=None, local_test_acc_index=None):
 
 def get_contract_address_or_mock(contract_name, **kwargs):
 
-    if (
-        network.show_active() in LOCAL_NETWORKS
-        and get_deployed_contracts_num(contract_to_mock_dict[contract_name]) < 1
-    ):
+    if network.show_active() in LOCAL_NETWORKS:
         deploy_mock(contract_name, **kwargs)
         return contract_to_mock_dict[contract_name][-1]
 

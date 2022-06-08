@@ -55,7 +55,7 @@ contract Lottery is Ownable, VRFConsumerBaseV2 {
         vrfReqID = coordinator.requestRandomWords(
             gasLaneKeyHash,
             vrfSubID,
-            2, //Request confirmations hardcoded
+            1, //Request confirmations hardcoded
             100000, //Gas limit hardcoded xD
             1 // Words to request
         );
@@ -123,8 +123,17 @@ contract Lottery is Ownable, VRFConsumerBaseV2 {
     //TODO: Add safemath here to avoid production issues, cause my math is garbage ;P
     function getEntryFeeETH() public view returns (uint256) {
         (, int256 price, , , ) = priceFeedUSD.latestRoundData();
-        uint256 priceInDecimals = ((entryFeeUSD * (10**18)) /
-            (uint256(price) * (10**10)));
-        return priceInDecimals;
+        uint256 priceFullDecimals = uint256(price) * 10**10;
+        uint256 entryFeeETH = (entryFeeUSD * 10**36) / priceFullDecimals;
+
+        return entryFeeETH;
+    }
+
+    function getParticipants() public view returns (address payable[] memory) {
+        return participants;
+    }
+
+    function getParticipantsNumber() public view returns (uint256) {
+        return participants.length;
     }
 }

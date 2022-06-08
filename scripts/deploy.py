@@ -27,9 +27,9 @@ def deploy_contract():
     )
 
 
-def deploy_lottery_for_testing(entry_fee, aggregator_args, vrf_coordinator_args):
-
-    deployment_account = get_user_account()
+def deploy_lottery_for_testing(
+    entry_fee, aggregator_args, vrf_coordinator_args, deployment_account
+):
     deployed_lottery = Lottery.deploy(
         entry_fee,  # Entry fee in USD
         get_contract_address_or_mock(
@@ -43,7 +43,7 @@ def deploy_lottery_for_testing(entry_fee, aggregator_args, vrf_coordinator_args)
         {"from": deployment_account},
     )
 
-    return deploy_contract
+    return deployed_lottery
 
 
 def main():
