@@ -1,4 +1,5 @@
 from multiprocessing.sharedctypes import Value
+import time
 import unittest
 import pytest
 from scripts.deploy import deploy_lottery_for_testing
@@ -189,4 +190,43 @@ class LotteryUnitTests(unittest.TestCase):
             }
         )
 
-        assert contract.currentPhase() != 1
+        assert contract.currentPhase() == 2
+
+    def test__endLottery__active_lottery_one_participant__assert_funds_received(self):
+        # deploy contract specifically because I need it not to be started
+        initial_price = 200000000000
+        entry_fee = 100
+        aggregator_args_dict = {"decimals": 8, "initial_answer": initial_price}
+        vrf_coordinator_args_dict = {"base_fee": 100000, "gas_price_link": 100000}
+        contract = deploy_lottery_for_testing(
+            entry_fee,
+            aggregator_args_dict,
+            vrf_coordinator_args_dict,
+            self.contract_owner_acc,
+        )
+
+        # start lottery
+        transaction = contract.startLottery({"from": self.contract_owner_acc})
+        transaction.wait(1)
+
+        balance_before_joining = self.lottery_player_acc_1.balance()
+        # join
+        transaction = contract.join(
+            {
+                "from": self.lottery_player_acc_1,
+                "value": contract.getEntryFeeETH(),
+            }
+        )
+        balance_after_joining = self.lottery_player_acc_1.balance()
+        assert contract.balance() > 0
+
+        # end it
+        contract.endLottery(
+            {
+                "from": self.contract_owner_acc,
+            }
+        )
+        time.sleep(2)
+        assert balance_before_joining > balance_after_joining
+        assert contract.balance() == 0
+        assert self.lottery_player_acc_1.balance() > balance_after_joining

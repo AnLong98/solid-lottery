@@ -79,6 +79,8 @@ contract Lottery is Ownable, VRFConsumerBaseV2 {
         if (success) {
             currentPhase = LOTTERY_PHASE.INACTIVE; //How to handle non success scenarios?
             participants = new address payable[](0);
+        } else {
+            revert("Transfer funds failed");
         }
     }
 

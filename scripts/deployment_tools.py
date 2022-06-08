@@ -1,4 +1,11 @@
-from brownie import accounts, config, network, MockV3Aggregator, VRFCoordinatorV2Mock
+from brownie import (
+    Wei,
+    accounts,
+    config,
+    network,
+    MockV3Aggregator,
+    VRFCoordinatorV2Mock,
+)
 import enum
 
 LOCAL_NETWORKS = ["ganache-local", "development"]
@@ -67,5 +74,21 @@ def get_network_gas_lane():
     return config["networks"][network.show_active()]["gas_lane"]
 
 
+def create_local_vrf_subscription(account, vrf_mock):
+    if network.show_active() in LOCAL_NETWORKS:
+        sub_id = vrf_mock.createSubscription({"from": account}).events[
+            "SubscriptionCreated"
+        ]["subId"]
+        vrf_mock.fundSubscription(sub_id, 100000000, {"from": account})
+    else:
+        raise Exception(
+            "Cannot create subscription locally when on mainnet or forked network."
+        )
+
+
 def get_network_sub_id():
+    if network.show_active() in LOCAL_NETWORKS:
+        raise Exception(
+            "Cannot get subscription id form local network, it has to be created"
+        )
     return config["networks"][network.show_active()]["subscription_id"]
