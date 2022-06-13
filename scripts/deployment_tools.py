@@ -10,20 +10,23 @@ import enum
 
 LOCAL_NETWORKS = ["ganache-local", "development"]
 FORKED_NETWORKS = []
+TEST_NETWORKS = ["rinkeby"]
 
 
 class ContractType(enum.Enum):
-    V3Aggregator = 1
-    VRFCoordinatorV2 = 2
+    chainlink_aggregator = 1
+    vrf_coordinator = 2
 
 
 contract_to_mock_dict = {
-    ContractType.V3Aggregator: MockV3Aggregator,
-    ContractType.VRFCoordinatorV2: VRFCoordinatorV2Mock,
+    ContractType.chainlink_aggregator: MockV3Aggregator,
+    ContractType.vrf_coordinator: VRFCoordinatorV2Mock,
 }
 
 
 def get_user_account(account_id=None, local_test_acc_index=None):
+    if network.show_active() not in LOCAL_NETWORKS:
+        return accounts.add(config["networks"][network.show_active()]["from_key"])
     if account_id:
         return accounts.load(account_id)
 
@@ -45,19 +48,21 @@ def get_contract_address_or_mock(contract_name, **kwargs):
     if network.show_active() in FORKED_NETWORKS:
         # get contract address from config
         pass
+    if network.show_active() in TEST_NETWORKS:
+        return config["networks"][network.show_active()][contract_name.name]
 
 
 def deploy_mock(contract_name, **kwargs):
     deployment_account = get_user_account()
     match contract_name:
-        case ContractType.V3Aggregator:
+        case ContractType.chainlink_aggregator:
             deployed_mock = MockV3Aggregator.deploy(
                 kwargs["decimals"],
                 kwargs["initial_answer"],
                 {"from": deployment_account},
             )
             return deployed_mock
-        case ContractType.VRFCoordinatorV2:
+        case ContractType.vrf_coordinator:
             deployed_mock = VRFCoordinatorV2Mock.deploy(
                 kwargs["base_fee"],
                 kwargs["gas_price_link"],
