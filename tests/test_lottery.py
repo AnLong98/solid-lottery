@@ -1,3 +1,4 @@
+from multiprocessing.connection import wait
 from multiprocessing.sharedctypes import Value
 import time
 import unittest
@@ -29,7 +30,7 @@ class LotteryUnitTests(unittest.TestCase):
         entry_fee = 50
         aggregator_args_dict = {"decimals": 8, "initial_answer": initial_price}
         vrf_coordinator_args_dict = {"base_fee": 100000, "gas_price_link": 100000}
-        self.contract = deploy_lottery_for_testing(
+        self.contract, _, _ = deploy_lottery_for_testing(
             entry_fee,
             aggregator_args_dict,
             vrf_coordinator_args_dict,
@@ -42,7 +43,7 @@ class LotteryUnitTests(unittest.TestCase):
         entry_fee = 30
         aggregator_args_dict = {"decimals": 8, "initial_answer": initial_price}
         vrf_coordinator_args_dict = {"base_fee": 100000, "gas_price_link": 100000}
-        contract = deploy_lottery_for_testing(
+        contract, _, _ = deploy_lottery_for_testing(
             entry_fee,
             aggregator_args_dict,
             vrf_coordinator_args_dict,
@@ -101,7 +102,7 @@ class LotteryUnitTests(unittest.TestCase):
         entry_fee = 100
         aggregator_args_dict = {"decimals": 8, "initial_answer": initial_price}
         vrf_coordinator_args_dict = {"base_fee": 100000, "gas_price_link": 100000}
-        contract = deploy_lottery_for_testing(
+        contract, _, _ = deploy_lottery_for_testing(
             entry_fee,
             aggregator_args_dict,
             vrf_coordinator_args_dict,
@@ -144,7 +145,7 @@ class LotteryUnitTests(unittest.TestCase):
         entry_fee = 80
         aggregator_args_dict = {"decimals": 8, "initial_answer": initial_price}
         vrf_coordinator_args_dict = {"base_fee": 100000, "gas_price_link": 100000}
-        contract = deploy_lottery_for_testing(
+        contract, _, _ = deploy_lottery_for_testing(
             entry_fee,
             aggregator_args_dict,
             vrf_coordinator_args_dict,
@@ -163,8 +164,8 @@ class LotteryUnitTests(unittest.TestCase):
         initial_price = 200000000000
         entry_fee = 80
         aggregator_args_dict = {"decimals": 8, "initial_answer": initial_price}
-        vrf_coordinator_args_dict = {"base_fee": 100000, "gas_price_link": 100000}
-        contract = deploy_lottery_for_testing(
+        vrf_coordinator_args_dict = {"base_fee": 1, "gas_price_link": 1}
+        contract, vrf_coordinator, chainlink_aggregator = deploy_lottery_for_testing(
             entry_fee,
             aggregator_args_dict,
             vrf_coordinator_args_dict,
@@ -184,21 +185,21 @@ class LotteryUnitTests(unittest.TestCase):
         )
 
         # end it
-        contract.endLottery(
+        end_transaction = contract.endLottery(
             {
                 "from": self.contract_owner_acc,
             }
         )
 
-        assert contract.currentPhase() == 2
+        assert contract.currentPhase() == 1
 
     def test__endLottery__active_lottery_one_participant__assert_funds_received(self):
         # deploy contract specifically because I need it not to be started
         initial_price = 200000000000
         entry_fee = 100
         aggregator_args_dict = {"decimals": 8, "initial_answer": initial_price}
-        vrf_coordinator_args_dict = {"base_fee": 100000, "gas_price_link": 100000}
-        contract = deploy_lottery_for_testing(
+        vrf_coordinator_args_dict = {"base_fee": 1, "gas_price_link": 1}
+        contract, vrf_coordinator, chainlink_aggregator = deploy_lottery_for_testing(
             entry_fee,
             aggregator_args_dict,
             vrf_coordinator_args_dict,
@@ -221,12 +222,13 @@ class LotteryUnitTests(unittest.TestCase):
         assert contract.balance() > 0
 
         # end it
-        contract.endLottery(
+        end_transaction = contract.endLottery(
             {
                 "from": self.contract_owner_acc,
             }
         )
-        time.sleep(2)
+        print(vrf_coordinator.events)
+
         assert balance_before_joining > balance_after_joining
         assert contract.balance() == 0
         assert self.lottery_player_acc_1.balance() > balance_after_joining

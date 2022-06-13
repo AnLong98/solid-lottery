@@ -15,6 +15,16 @@ contract Lottery is Ownable, VRFConsumerBaseV2 {
     }
     //
 
+    //Events
+    event RequestedRandomWord(
+        uint64 indexed _subscriptionId,
+        uint256 _requestID
+    );
+    event ReceivedRandomWord(uint256 _requestID, uint256 _receivedWord);
+    event FundsTransfered(address payable indexed _winnerAddress);
+    event RandomWordRetrievalFailiure(string error);
+    //
+
     //External interfaces
     AggregatorV3Interface internal priceFeedUSD;
     VRFCoordinatorV2Interface internal coordinator;
@@ -51,21 +61,29 @@ contract Lottery is Ownable, VRFConsumerBaseV2 {
 
     // Assumes the subscription is funded sufficiently.
     function requestRandomWords() private {
-        // Will revert if subscription is not set and funded.
-        vrfReqID = coordinator.requestRandomWords(
-            gasLaneKeyHash,
-            vrfSubID,
-            1, //Request confirmations hardcoded
-            100000, //Gas limit hardcoded xD
-            1 // Words to request
-        );
+        try
+            // Will revert if subscription is not set and funded.
+            coordinator.requestRandomWords(
+                gasLaneKeyHash,
+                vrfSubID,
+                1, //Request confirmations hardcoded
+                100000, //Gas limit hardcoded xD
+                1 // Words to request
+            )
+        returns (uint256 reqId) {
+            vrfReqID = reqId;
+            emit RequestedRandomWord(vrfSubID, vrfReqID);
+        } catch Error(string memory _err) {
+            emit RandomWordRetrievalFailiure(_err);
+        }
     }
 
     //Callback function to process chosen random number from VRF
     function fulfillRandomWords(
-        uint256, /* requestId */
+        uint256 requestID, /* requestId */
         uint256[] memory randomWords
     ) internal override {
+        emit ReceivedRandomWord(requestID, randomWords[0]);
         randomNumber = randomWords[0];
         uint256 winnerIndex = randomNumber % participants.length;
         transferFundsToWinner(winnerIndex);
@@ -77,6 +95,7 @@ contract Lottery is Ownable, VRFConsumerBaseV2 {
         }("");
 
         if (success) {
+            emit FundsTransfered(participants[winnerIndex]);
             currentPhase = LOTTERY_PHASE.INACTIVE; //How to handle non success scenarios?
             participants = new address payable[](0);
         } else {

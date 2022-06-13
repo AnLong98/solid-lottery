@@ -32,13 +32,12 @@ def deploy_lottery_for_testing(
     )
     # Below lines are commented out as consumer subscription validation is not working as expected locally
 
-    # vrf_coordinator.addConsumer(
-    #   sub_id, deployed_lottery, {"from": deployment_account}
-    # ).wait(
-    #     1
-    # )  # Add contract as consumer to local subscription
-
-    return deployed_lottery
+    vrf_coordinator.addConsumer(
+        sub_id, deployed_lottery, {"from": deployment_account}
+    ).wait(
+        1
+    )  # Add contract as consumer to local subscription
+    return deployed_lottery, vrf_coordinator, chainlink_aggregator
 
 
 def main():

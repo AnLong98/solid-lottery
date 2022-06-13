@@ -178,14 +178,12 @@ contract VRFCoordinatorV2Mock is VRFCoordinatorV2Interface {
     )
         external
         override
-        returns (
-            //onlyValidConsumer(_subId, msg.sender) //Commented to make  it work
-            uint256
-        )
+        onlyValidConsumer(_subId, msg.sender) //Commented to make  it work
+        returns (uint256)
     {
-        //if (s_subscriptions[_subId].owner == address(0)) {
-        //    revert InvalidSubscription();
-        //}
+        if (s_subscriptions[_subId].owner == address(0)) {
+            revert InvalidSubscription();
+        }
         //Commented out because I cant make it work for now
 
         uint256 requestId = s_nextRequestId++;
@@ -207,6 +205,7 @@ contract VRFCoordinatorV2Mock is VRFCoordinatorV2Interface {
             _numWords,
             msg.sender
         );
+        this.fulfillRandomWords(requestId, msg.sender);
         return requestId;
     }
 

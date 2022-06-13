@@ -80,6 +80,7 @@ def create_local_vrf_subscription(account, vrf_mock):
             "SubscriptionCreated"
         ]["subId"]
         vrf_mock.fundSubscription(sub_id, 100000000, {"from": account})
+        return sub_id
     else:
         raise Exception(
             "Cannot create subscription locally when on mainnet or forked network."
